@@ -39,12 +39,12 @@ public class ItemController {
 		this.itemService = itemService;
 	}
 
-	@GetMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(path = "/{id}", consumes = {"*/*"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ItemDto> getItem(@PathVariable(name = "id", required = true) Long id) {
 		return ResponseEntity.ok(itemService.getItemById(id));
 	}
 
-	@GetMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(consumes = {"*/*"}, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<ItemDto>> getItemList(@RequestParam(name = "notDone", required = false) boolean notDone) {
 		if (notDone) {
 			return ResponseEntity.ok(itemService.getAllNotDoneItems());

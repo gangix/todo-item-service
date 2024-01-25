@@ -1,0 +1,16 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    ports:
+      - "15672:15672" 
+      - "5672:5672"
+  simple-system-task:
+    build: ./
+    container_name: simple-system-task
+    ports:
+       - "8080:8080"
+    volumes:
+       - ./simple-system-task:/app
+    depends_on:
+      - rabbitmq
