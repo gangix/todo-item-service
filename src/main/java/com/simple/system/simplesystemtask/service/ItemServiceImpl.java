@@ -22,7 +22,7 @@ public class ItemServiceImpl implements ItemService {
 
 	private final ItemRepository itemRepository;
 
-	public ItemServiceImpl(ItemRepository itemRepository) {
+	public ItemServiceImpl(ItemRepository itemRepository, RabbitQueueService rabbitQueueService) {
 		super();
 		this.itemRepository = itemRepository;
 	}
@@ -51,17 +51,23 @@ public class ItemServiceImpl implements ItemService {
 
 	@Override
 	@Transactional
-	public void updateStatus(UpdateStatusCommand updateStatusCommand) {
+	public void updateStatus(UpdateStatusCommand updateStatusCommand, boolean isWeb) {
 		Status status = updateStatusCommand.status();
 		Item item = getItemEntityById(updateStatusCommand.id());
-		if (Status.PAST_DUE == item.getStatus()) {
+		if (isWeb && Status.PAST_DUE == item.getStatus()) {
 			throw new OperationIsForbidenException("Updating PAST_DUE item");
 		}
 
 		switch (status) {
-			case DONE -> markAsDone(item);
-			case NOT_DONE -> markAsNotDone(item);
-			case PAST_DUE -> throw new OperationIsForbidenException("Updating status as PAST_DUE");
+		case DONE -> markAsDone(item);
+		case NOT_DONE -> markAsNotDone(item);
+		case PAST_DUE -> {
+			if (isWeb) {
+				throw new OperationIsForbidenException("Updating status as PAST_DUE");
+			} else {
+				markAsPastDue(item);
+			}
+		}
 		}
 	}
 
@@ -79,11 +85,21 @@ public class ItemServiceImpl implements ItemService {
 		itemRepository.save(item);
 	}
 
+	private void markAsPastDue(Item item) {
+		if (item.getStatus() != Status.NOT_DONE) {
+			throw new OperationIsForbidenException(
+					"Updating status as PAST_DUE when current status is different than NOT_DONE");
+		}
+		item.setStatus(Status.PAST_DUE);
+
+		itemRepository.save(item);
+	}
+
 	@Override
 	public ItemDto getItemById(Long id) {
 		return ItemDto.from(getItemEntityById(id));
 	}
-	
+
 	@Override
 	public List<ItemDto> getAllNotDoneItems() {
 		return itemRepository.findByStatus(Status.NOT_DONE).stream().map(ItemDto::from).toList();
@@ -93,7 +109,14 @@ public class ItemServiceImpl implements ItemService {
 	public List<ItemDto> getAllItems() {
 		return itemRepository.findAll().stream().map(ItemDto::from).toList();
 	}
-	
+
+	@Override
+	public List<ItemDto> getItemsToMarkAsPastDue() {
+		return itemRepository.findByStatus(Status.NOT_DONE).stream()
+				.filter(item -> Instant.now().isAfter(item.getDueTime()))
+				.map(ItemDto::from).toList();
+	}
+
 	private Item getItemEntityById(Long id) {
 		return itemRepository.findById(id).orElseThrow(() -> ItemNotFoundException.of(id));
 	}

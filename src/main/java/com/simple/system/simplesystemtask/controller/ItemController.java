@@ -75,6 +75,6 @@ public class ItemController {
 	public void updateStatus(@PathVariable(name = "id", required = true) Long id,
 			@Valid @RequestBody UpdateStatusRequest request) {
 		var updateStatusCommand = new UpdateStatusCommand(id, Status.valueOf(request.status()));
-		itemService.updateStatus(updateStatusCommand);
+		itemService.updateStatus(updateStatusCommand, true);
 	}
 }

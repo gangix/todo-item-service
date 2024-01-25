@@ -12,11 +12,13 @@ public interface ItemService {
 
 	void updateDescription(UpdateDescriptionCommand updateDescriptionCommand);
 
-	void updateStatus(UpdateStatusCommand updateStatusCommand);
+	void updateStatus(UpdateStatusCommand updateStatusCommand, boolean isWeb);
 
 	ItemDto getItemById(Long id);
 	
 	List<ItemDto> getAllItems();
 
 	List<ItemDto> getAllNotDoneItems();
+
+	List<ItemDto> getItemsToMarkAsPastDue();
 }

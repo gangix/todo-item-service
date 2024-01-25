@@ -74,7 +74,7 @@ public class ItemServiceMockTest {
 		item.setStatus(Status.DONE);
 		
 		Mockito.when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
-		itemService.updateStatus(cmd);
+		itemService.updateStatus(cmd, true);
 		Mockito.verify(itemRepository, times(1)).save(itemCaptor.capture());
 		Item value = itemCaptor.getValue();
 	
@@ -90,7 +90,7 @@ public class ItemServiceMockTest {
 		item.setStatus(Status.NOT_DONE);
 		
 		Mockito.when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
-		itemService.updateStatus(cmd);
+		itemService.updateStatus(cmd, true);
 		Mockito.verify(itemRepository, times(1)).save(itemCaptor.capture());
 		Item value = itemCaptor.getValue();
 	
@@ -98,7 +98,7 @@ public class ItemServiceMockTest {
 	}
 	
 	@Test
-	void WhenItemIsPastDue_GivenUpdateStatusCommand_ShouldThrowException() {
+	void WhenItemIsPastDue_GivenUpdateStatusCommandFromWeb_ShouldThrowException() {
 		UpdateStatusCommand cmd = new UpdateStatusCommand(1L, Status.DONE);
 		Item item = new Item();
 		item.setDescription("desc");
@@ -108,8 +108,56 @@ public class ItemServiceMockTest {
 		Mockito.when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
 		OperationIsForbidenException thrown = assertThrows(
 				OperationIsForbidenException.class,
-		           () -> itemService.updateStatus(cmd), "Expected updateStatus() to throw, but it didn't"
+		           () -> itemService.updateStatus(cmd, true), "Expected updateStatus() to throw, but it didn't"
 		    );
 		assertThat(thrown.getMessage()).isEqualTo("Updating PAST_DUE item is forbidden");
+	}
+	
+	@Test
+	void GivenUpdateStatusCommandWithPastDueFromWeb_ShouldThrowException() {
+		UpdateStatusCommand cmd = new UpdateStatusCommand(1L, Status.PAST_DUE);
+		Item item = new Item();
+		item.setDescription("desc");
+		item.setDueTime(Instant.now());
+		item.setStatus(Status.DONE);
+		
+		Mockito.when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+		OperationIsForbidenException thrown = assertThrows(
+				OperationIsForbidenException.class,
+		           () -> itemService.updateStatus(cmd, true), "Expected updateStatus() to throw, but it didn't"
+		    );
+		assertThat(thrown.getMessage()).isEqualTo("Updating status as PAST_DUE is forbidden");
+	}
+	
+	@Test
+	void WhenItemIsNotDone_GivenUpdateStatusCommandFromJob_ShouldBeSavedProperly() {
+		UpdateStatusCommand cmd = new UpdateStatusCommand(1L, Status.PAST_DUE);
+		Item item = new Item();
+		item.setDescription("desc");
+		item.setDueTime(Instant.now());
+		item.setStatus(Status.NOT_DONE);
+		
+		Mockito.when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+		itemService.updateStatus(cmd, false);
+		Mockito.verify(itemRepository, times(1)).save(itemCaptor.capture());
+		Item value = itemCaptor.getValue();
+	
+		assertThat(value.getStatus()).isEqualTo(Status.PAST_DUE);
+	}
+	
+	@Test
+	void GivenUpdateStatusCommandWithPastDueFromJob_ShouldBeSaved() {
+		UpdateStatusCommand cmd = new UpdateStatusCommand(1L, Status.PAST_DUE);
+		Item item = new Item();
+		item.setDescription("desc");
+		item.setDueTime(Instant.now());
+		item.setStatus(Status.DONE);
+		Mockito.when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+		
+		OperationIsForbidenException thrown = assertThrows(
+				OperationIsForbidenException.class,
+		           () -> itemService.updateStatus(cmd, false), "Expected updateStatus() to throw, but it didn't"
+		    );
+		assertThat(thrown.getMessage()).isEqualTo("Updating status as PAST_DUE when current status is different than NOT_DONE is forbidden");
 	}
 }
