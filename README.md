@@ -6,8 +6,9 @@ Service to register todo items and track their statuses. Shecduled job checks NO
 #### tech stack used
  -spring boot<br />
  -java-17<br />
- -h2 database<br />
- -rabbitmq
+ -h2 database(jdbc:h2:mem:testdb)<br />
+ -rabbitmq<br />
+ -open api /swagger
 
 ## How to:
 
